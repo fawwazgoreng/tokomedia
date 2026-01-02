@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+body {
+  min-width: 100vh;
+  min-height: 100vh;
+  background-color: rgb(244, 249, 248);
+  @apply overflow-x-hidden overflow-y-scroll;
+}

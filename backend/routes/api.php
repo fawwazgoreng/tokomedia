@@ -1,0 +1,12 @@
+<?php
+
+use App\Http\Controllers\productController;
+use Illuminate\Support\Facades\Route;
+
+Route::middleware("user.middle")->group(function () {
+
+});
+
+Route::prefix("/product")->group(function () {
+    Route::get("/" , [productController::class , "index"]);
+});
