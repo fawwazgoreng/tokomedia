@@ -19,17 +19,17 @@ class userAuthMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // try {
+        try {
             $header = $request->bearerToken();
-            $key = env('FIREBASE_SECRET_KEY', "gdwyudabdsjab");
+            $key = config('passport.firebase_key');
             $stdclass = new stdClass();
             $access_token = JWT::decode($header , new Key($key , 'HS256') , $stdclass);
             $request->setUserResolver(fn() => $access_token);
             return $next($request);
-        // } catch (\Exception $e) {
-        //     return response()->json([
-        //         'status' => 'failed to login'
-        //     ], 401);
-        // }
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'failed to login'
+            ], 401);
+        }
     }
 }

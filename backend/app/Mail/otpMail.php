@@ -3,7 +3,6 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -15,9 +14,8 @@ class otpMail extends Mailable
     /**
      * Create a new message instance.
      */
-    public function __construct(protected $otp)
+    public function __construct(public $otp)
     {
-        
     }
 
     /**
@@ -26,8 +24,14 @@ class otpMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Otp Mail',
+            subject: 'Otp Mail'
         );
+    }
+
+    public function build()
+    {
+        return $this->subject('Kode OTP Anda')
+            ->view('emailotp' , ['otp' => $this->otp]);
     }
 
     /**
@@ -36,7 +40,7 @@ class otpMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emailotp',
+            view: 'emailotp'
         );
     }
 

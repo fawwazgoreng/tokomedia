@@ -11,7 +11,7 @@ class email_otp extends Model
     protected $table = 'email_otps';
     protected $primaryKey = 'id';
     protected $fillable = [
-        'otp' , 'expires_at' , 'email'
+        'otp' , 'expires_at' , 'email' , 'for_id' , 'for_type'
     ];
 
     public function for() : MorphTo {

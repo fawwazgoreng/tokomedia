@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import api from "../helper/axios";
-import type { cartState, cartType } from "../type/cart";
+import api from "@/helper/axios";
+import type { cartState, cartType } from "@/type/cart";
 import axios from "axios";
 
 export const fetchCart = createAsyncThunk<

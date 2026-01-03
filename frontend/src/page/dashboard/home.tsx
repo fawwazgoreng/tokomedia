@@ -1,4 +1,4 @@
-import { CustomSlider } from "../../components/slider";
+import { CustomSlider } from "@/components/slider";
 import "swiper/swiper.css";
 
 export default function HomePage () {
