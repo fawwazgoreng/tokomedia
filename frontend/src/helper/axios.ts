@@ -3,7 +3,7 @@ import { userStore } from "./auth/userauth";
 
 const api = axios.create({
     baseURL : import.meta.env.VITE_PUBLIC_BASEURL,
-    timeout : 5000,
+    timeout : 10000,
     withCredentials : true,
     withXSRFToken : true,
 

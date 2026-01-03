@@ -3,9 +3,9 @@ import {
   createSlice,
   type PayloadAction,
 } from "@reduxjs/toolkit";
-import api from "../helper/axios";
-import type { errorTemplate, user, userStoreType } from "../type/login";
-import { userStore } from "../helper/auth/userauth";
+import api from "@/helper/axios";
+import type { errorTemplate, user, userStoreType } from "@/type/login";
+import { userStore } from "@/helper/auth/userauth";
 import axios from "axios";
 
 export const initCsrf = createAsyncThunk("auth/csrf", async () => {
@@ -18,6 +18,24 @@ export const login = createAsyncThunk<user , {email : string , password : string
     try {
       await api.get("/sanctum/csrf-cookie");
       const res = await api.post("/api/user/login", payload );
+      userStore.set(res.data.token);
+      return res.data.user;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error : any) {
+      if (axios.isAxiosError(error) && error.response) {
+        return rejectWithValue(error.response.data);
+      }
+      return rejectWithValue({message : "server sedang sibuk silahkan coba lagi nanti"});
+    }
+  }
+);
+
+export const register = createAsyncThunk<user , {email : string , password : string , name : string}>(
+  "user/register",
+  async (payload: { email: string; password: string  , name : string} , {rejectWithValue}) => {
+    try {
+      await api.get("/sanctum/csrf-cookie");
+      const res = await api.post("/api/user/register", payload );
       userStore.set(res.data.token);
       return res.data.user;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -46,6 +64,7 @@ export const logout = createAsyncThunk("user/logout", async () => {
   await api.delete("/api/user/logout");
   userStore.clear();
 });
+
 const initialState: userStoreType = {
   status: "idle",
   user: null,

@@ -23,8 +23,11 @@ class resReturn
     function returnWithToken($user, $access_token, $refresh_token, $redirect = false)
     {
         $cookie = cookie('refresh_token', $refresh_token, 60 * 24 * 7, '/', null, false, true, false, 'Lax');
-        if ($redirect) {
-            response()->json();
+        if (!$redirect) {
+            return response()->json([
+                "token" => $access_token,
+                "user" => $user
+            ])->withCookie($cookie);
         }
         return redirect()->away(env("APP_FRONTEND_URL", "http://localhost:5173") . "/auth/success", 302, [
             "token" => $access_token,

@@ -1,5 +1,3 @@
 <h2>Kode otp anda</h2>
-@isset($otp)
-    <h1>{{$otp}}</h1>
-@endisset
+<h1>{{$otp}}</h1>
 <p>Berlaku sampai 5 menit</p>

@@ -1,31 +1,26 @@
 <?php
 
-use App\Http\Controllers\OauthUserController;
+use App\Http\Controllers\userLogController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
 });
+Route::get('/test' , [userLogController::class , 'test']);
 
-// Route::get('/test', function () {
-//     $res = '';
-//     for ($i = 0 ; $i < 7 ; $i++) {
-//         $res = $res . str(random_int(1 ,10));
-//     }
-//     return response()->json($res);
-// });
+Route::get('/auth/google/redirect', [userLogController::class, 'redirect']);
+Route::get('/auth/google/callback', [userLogController::class, 'callback']);
 
-Route::get('/auth/google/redirect', [OauthUserController::class, 'redirect']);
-Route::get('/auth/google/callback', [OauthUserController::class, 'callback']);
-// Route::prefix('user')->group(function () {
-// Route::post('/login' , [OauthUserController::class , '']);
-// });
-Route::prefix('api/user')->group(function () {
-    Route::post('/login', [OauthUserController::class, 'login']);
-    Route::post('/register', [OauthUserController::class, 'register']);
-    Route::post('/refresh', [OauthUserController::class, 'refresh']);
-    Route::middleware("user.middle")->group(function () {
-        Route::delete('/logout', [OauthUserController::class, 'logout']);
-        Route::get("/profile", [OauthUserController::class, 'profile']);
+
+Route::prefix('api/')->group(function () {
+    Route::post('otp/verification' , [userLogController::class , 'verifyedOtp']);
+    Route::prefix('user')->group(function () {
+        Route::post('/login', [userLogController::class, 'login']);
+        Route::post('/register', [userLogController::class, 'register']);
+        Route::post('/refresh', [userLogController::class, 'refresh']);
+        Route::middleware("user.middle")->group(function () {
+            Route::delete('/logout', [userLogController::class, 'logout']);
+            Route::get("/profile", [userLogController::class, 'profile']);
+        });
     });
 });

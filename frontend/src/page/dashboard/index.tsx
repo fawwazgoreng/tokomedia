@@ -2,9 +2,9 @@ import { useState, type FormEvent } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { BiCart, BiSearch } from "react-icons/bi";
 import { FaHistory } from "react-icons/fa";
-import { useAppDispatch, useAppSelector } from "../../helper/storefn";
+import { useAppDispatch, useAppSelector } from "@/helper/storefn";
 import { FaArrowRightFromBracket } from "react-icons/fa6";
-import { logout } from "../../store/login";
+import { logout } from "@/store/user";
 
 export default function LayoutDashboard() {
     const navigate = useNavigate();

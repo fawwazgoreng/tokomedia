@@ -20,13 +20,16 @@ use Laravel\Socialite\Facades\Socialite;
 
 use function Illuminate\Support\now;
 
-class OauthUserController extends Controller
+class userLogController extends Controller
 {
     public function __construct(protected resReturn $res_return, protected pathphoto $photofn, protected emailOtp $emailFn) {}
-
+    public function test()
+    {
+        return response()->json("test");
+    }
     protected function getSecretKey()
     {
-        $key = env("FIREBASE_SECRET_KEY", "gdwyudabdsjab");
+        $key = config('passport.firebase_key');
         return $key;
     }
 
@@ -38,21 +41,22 @@ class OauthUserController extends Controller
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
         ]);
-        return response()->json([
-            'status' => 'success',
-            'message' => 'berhasil register'
-        ]);
+        return $this->send($user);
     }
 
     public function login(userLogRequest $request)
     {
         $data = $request->validated();
-        $user = User::where('email', $data['email']);
+        $user = User::where('email', $data['email'])->first();
         if (!$user || !Hash::check($data['password'], $user->password)) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'username atau password salah'
             ]);
+        }
+        $last_refresh_token = refresh_token::where("tokenable_id" , $user->id)->where("tokenable_type" , User::class);
+        if ($last_refresh_token) {
+            $last_refresh_token->delete();
         }
         $key = $this->getSecretKey();
         $payload = [
@@ -63,7 +67,7 @@ class OauthUserController extends Controller
         ];
         $access_token = JWT::encode($payload, $key, 'HS256');
         $refresh_token = $this->res_return->createRefreshToken($user);
-        return $this->res_return->returnWithToken($user, $access_token, $refresh_token);
+        return $this->res_return->returnWithToken($user, $access_token, $refresh_token , false);
     }
 
     public function logout(Request $request)
@@ -172,10 +176,10 @@ class OauthUserController extends Controller
         return response()->json($request->user());
     }
 
-    protected function send($email)
+    protected function send($user)
     {
-        $otp = $this->emailFn->createOtp($email);
-        Mail::to($email)->send(new otpMail($otp));
+        $otp = $this->emailFn->createOtp($user->email, $user);
+        Mail::to($user->email)->send(new otpMail($otp));
         return response()->json([
             'message' => 'OTP berhasil dikirim ke email'
         ]);
@@ -202,6 +206,7 @@ class OauthUserController extends Controller
             ], 400);
         }
         $email = email_otp::select(['id', 'email', 'expires_at', 'otp'])->where('email', $validator['email']);
+        $user = $email->for;
         if (!$email || !Hash::check($validator['email'], $email)) {
             return response()->json([
                 'status' => 'error',
@@ -209,6 +214,9 @@ class OauthUserController extends Controller
             ], 401);
         }
         $email->delete();
-        
+        return response()->json([
+            'status' => 'success',
+            'message' => 'berhasil register'
+        ]);
     }
 }

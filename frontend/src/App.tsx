@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useAppDispatch, useAppSelector } from './helper/storefn';
-import { initCsrf, profile, refresh } from './store/login';
-import LoginPage from './page/login';
-import HomePage from './page/dashboard/home';
-import LayoutDashboard from './page/dashboard';
-import { Loading } from './components/loading';
-import { CallBacks } from './components/callback';
+import { useAppDispatch, useAppSelector } from '@/helper/storefn';
+import { initCsrf, profile, refresh } from '@/store/user';
+import LoginPage from '@/page/login/login';
+import HomePage from '@/page/dashboard/home';
+import LayoutDashboard from '@/page/dashboard';
+import { Loading } from '@/components/loading';
+import { CallBacks } from '@/components/callback';
+import RegisterPage from '@/page/login/register';
 
 function App() {
   const [isInitializing, setIsInitializing] = useState(true);
@@ -51,7 +52,7 @@ function App() {
         />
         <Route
           path="/register"
-          element={isLogin ? <Navigate to="/user" /> : <LoginPage />}
+          element={isLogin ? <Navigate to="/user" /> : <RegisterPage />}
         />
         <Route path="/user/*" element={<LayoutDashboard />}>
           <Route
