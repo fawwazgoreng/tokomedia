@@ -7,6 +7,7 @@ import api from "@/helper/axios";
 import type { errorTemplate, user, userStoreType } from "@/type/login";
 import { userStore } from "@/helper/auth/userauth";
 import axios from "axios";
+import { userOtp } from "@/helper/auth/userotp";
 
 export const initCsrf = createAsyncThunk("auth/csrf", async () => {
   await api.get("/sanctum/csrf-cookie");
@@ -16,14 +17,13 @@ export const login = createAsyncThunk<user , {email : string , password : string
   "user/login",
   async (payload: { email: string; password: string } , {rejectWithValue}) => {
     try {
-      await api.get("/sanctum/csrf-cookie");
       const res = await api.post("/api/user/login", payload );
       userStore.set(res.data.token);
       return res.data.user;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error : any) {
       if (axios.isAxiosError(error) && error.response) {
-        return rejectWithValue(error.response.data);
+        return rejectWithValue({message : error.response.data});
       }
       return rejectWithValue({message : "server sedang sibuk silahkan coba lagi nanti"});
     }
@@ -32,12 +32,11 @@ export const login = createAsyncThunk<user , {email : string , password : string
 
 export const register = createAsyncThunk<user , {email : string , password : string , name : string}>(
   "user/register",
-  async (payload: { email: string; password: string  , name : string} , {rejectWithValue}) => {
+  async (payload: { email: string; password: string  , name : string} ,  {rejectWithValue}) => {
     try {
-      await api.get("/sanctum/csrf-cookie");
       const res = await api.post("/api/user/register", payload );
-      userStore.set(res.data.token);
-      return res.data.user;
+      userOtp.set(res.data.email);
+      return res.data;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error : any) {
       if (axios.isAxiosError(error) && error.response) {
@@ -109,10 +108,12 @@ const userAuth = createSlice({
         state.user = action.payload;
         state.isLogin = true;
       })
-      .addCase(profile.rejected, (state) => {
+      .addCase(profile.rejected, (state , action) => {
         state.status = "idle";
         state.user = null;
         state.isLogin = false;
+        const payload = action.payload as errorTemplate ;
+        state.error = payload?.error || payload?.message || payload?.status;
       })
       .addCase(refresh.fulfilled, (state) => {
         state.status = "authenticated";

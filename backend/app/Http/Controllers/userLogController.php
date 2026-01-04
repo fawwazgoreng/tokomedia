@@ -10,10 +10,10 @@ use App\Models\User;
 use App\services\emailOtp;
 use App\services\pathphoto;
 use App\services\resReturn;
+use Carbon\Carbon;
 use Firebase\JWT\JWT;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
@@ -36,6 +36,10 @@ class userLogController extends Controller
     public function register(userLogRequest $request)
     {
         $data = $request->validated();
+        $last_user = User::select(['password', 'id', 'email_verified_at', 'email'])->where('email', $data['email'])->first();
+        if ($last_user &&  $last_user->email_verified_at == null) {
+            $last_user->delete();
+        }
         $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
@@ -47,14 +51,14 @@ class userLogController extends Controller
     public function login(userLogRequest $request)
     {
         $data = $request->validated();
-        $user = User::where('email', $data['email'])->first();
-        if (!$user || !Hash::check($data['password'], $user->password)) {
+        $user = User::select(['id' , 'email' , 'password' , 'email_verified_at' , 'name'])->where('email', $data['email'])->first();
+        if (!$user || !Hash::check($data['password'], $user->password) || $user->email_verified_at == null) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'username atau password salah'
-            ]);
+            ], 400);
         }
-        $last_refresh_token = refresh_token::where("tokenable_id" , $user->id)->where("tokenable_type" , User::class);
+        $last_refresh_token = refresh_token::where("tokenable_id", $user->id)->where("tokenable_type", User::class);
         if ($last_refresh_token) {
             $last_refresh_token->delete();
         }
@@ -67,13 +71,13 @@ class userLogController extends Controller
         ];
         $access_token = JWT::encode($payload, $key, 'HS256');
         $refresh_token = $this->res_return->createRefreshToken($user);
-        return $this->res_return->returnWithToken($user, $access_token, $refresh_token , false);
+        return $this->res_return->returnWithToken($user, $access_token, $refresh_token, false);
     }
 
     public function logout(Request $request)
     {
         $user = $request->user();
-        $refresh_token = refresh_token::where("tokenable_id", $user->id)->where("tokenable_type", User::class)->first();
+        $refresh_token = refresh_token::select(['id'])->where("tokenable_id", $user->id)->where("tokenable_type", User::class)->first();
         if ($refresh_token) {
             $refresh_token->delete();
         }
@@ -155,8 +159,11 @@ class userLogController extends Controller
                 'message' => 'sesi login telah habis silahkan login ulang'
             ], 401)->withCookie(cookie()->forget('refresh_token'));
         }
-        Log::info($refresh_token);
         $user = $refresh_token->tokenable;
+        if ($user->email_verified_at == null) {
+            $user->delete();
+            return response()->json([], 401);
+        }
         $payload = [
             'id' => $user->id,
             'email' => $user->email,
@@ -181,23 +188,24 @@ class userLogController extends Controller
         $otp = $this->emailFn->createOtp($user->email, $user);
         Mail::to($user->email)->send(new otpMail($otp));
         return response()->json([
-            'message' => 'OTP berhasil dikirim ke email'
+            'status' => 'success',
+            'message' => 'OTP berhasil dikirim ke email',
+            'email' => $user->email
         ]);
     }
 
     public function verifyedOtp(Request $request)
     {
         $rule = [
-            'kode' => ['string', 'min:6', 'max:6'],
-            'email' => ['email']
+            'otp' => ['string', 'min:6', 'max:6'],
         ];
         $message = [
-            'kode.string' => 'kode harus berupa string',
-            'kode.min' => 'minimal kode :min',
-            'kode.max' => 'maximal kode :max',
-            'email.email' => 'maximal kode :email',
+            'otp.string' => 'otp harus berupa string',
+            'otp.min' => 'minimal otp :min',
+            'otp.max' => 'maximal otp :max',
         ];
         $validator = validator($request->all(), $rule, $message);
+        $data = $validator->validated();
         if ($validator->fails()) {
             return response()->json([
                 'status' => 'error',
@@ -205,15 +213,20 @@ class userLogController extends Controller
                 'error' => $validator->errors()
             ], 400);
         }
-        $email = email_otp::select(['id', 'email', 'expires_at', 'otp'])->where('email', $validator['email']);
-        $user = $email->for;
-        if (!$email || !Hash::check($validator['email'], $email)) {
+        $otp = hash('sha256' , $data['otp']);
+        $email = email_otp::where('otp' , $otp)->where('for_type', User::class)->first();
+        if (!$email) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'kode otp salah',
             ], 401);
         }
+        $user = $email->for;
         $email->delete();
+        $user->update([
+            'email_verified_at' => now(),
+        ]);
+        $user->save();
         return response()->json([
             'status' => 'success',
             'message' => 'berhasil register'

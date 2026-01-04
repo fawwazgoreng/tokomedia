@@ -8,6 +8,7 @@ import LayoutDashboard from '@/page/dashboard';
 import { Loading } from '@/components/loading';
 import { CallBacks } from '@/components/callback';
 import RegisterPage from '@/page/login/register';
+import SendOtp from './page/login/sendOtp';
 
 function App() {
   const [isInitializing, setIsInitializing] = useState(true);
@@ -54,6 +55,10 @@ function App() {
           path="/register"
           element={isLogin ? <Navigate to="/user" /> : <RegisterPage />}
         />
+        <Route
+            path='/verify-otp'
+            element={<SendOtp />}
+          />
         <Route path="/user/*" element={<LayoutDashboard />}>
           <Route
             index

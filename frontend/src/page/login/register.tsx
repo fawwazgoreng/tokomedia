@@ -3,6 +3,7 @@ import { useAppDispatch, useAppSelector } from "@/helper/storefn";
 import { register } from "@/store/user";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { useNavigate} from "react-router-dom";
+import { userOtp } from "@/helper/auth/userotp";
 
 export default function RegisterPage() {
     const navi = useNavigate();
@@ -50,9 +51,7 @@ export default function RegisterPage() {
                 setStatus(useSelector.error);
                 return;
             }
-            navi("/");
-        } catch {
-            setStatus('server sedang sibuk silahkan coba lagi nanti')
+            navi("/verify-otp");
         } finally {
             setLoading(false);
         }

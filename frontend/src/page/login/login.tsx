@@ -2,12 +2,10 @@ import { useState, type FormEvent } from "react";
 import { useAppDispatch, useAppSelector } from "@/helper/storefn";
 import { login, profile } from "@/store/user";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { useParams } from "react-router-dom";
 import { BsGoogle } from "react-icons/bs";
+import { Link, } from "react-router-dom";
 
 export default function LoginPage() {
-    const param = useParams();
-    console.log(param);
     const handleGoogleLogin = () => {
         const width = window.innerWidth;
         console.log(width);
@@ -84,6 +82,7 @@ export default function LoginPage() {
                             <BsGoogle color="white" className="mt-1"></BsGoogle>
                             <button onClick={handleGoogleLogin} className="text-white ">Login via google </button>
                         </div>
+                        <Link to={'/register'}>belum punya akun ? register dulu</Link>
                     </div>
                 </div>
             </main>
