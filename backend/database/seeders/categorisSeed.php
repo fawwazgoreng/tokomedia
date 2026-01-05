@@ -19,8 +19,8 @@ class categorisSeed extends Seeder
         $categories = categories::create([
             'name' => 'categori 2'
         ]);
-        for ($i = 11; $i < 16; $i++) {
-            $product = product::with('categories')->find($i);
+        for ($i = 11; $i < 20; $i++) {
+            $product = product::find($i);
             $product->categories()->attach($categories->id);
             variants::create([
                 'product_id' => $product->id,

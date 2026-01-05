@@ -32,7 +32,7 @@ class product extends Model
         return $this->belongsToMany(categories::class , 'categories_products');
     }
 
-        public function cart (): BelongsToMany {
+    public function cart (): BelongsToMany {
         return $this->belongsToMany(cart::class , 'carts_products');
     }
 

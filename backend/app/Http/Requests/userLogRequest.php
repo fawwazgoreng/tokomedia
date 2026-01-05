@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 class userLogRequest extends FormRequest
 {
@@ -23,18 +24,15 @@ class userLogRequest extends FormRequest
     public function rules(): array
     {
         $rules = [
-            'name' => ['required' , 'min:3' , 'max:100'],
-            'password' => ['required' , 'min:3' , 'max:100'],
-            'email' => ['required' , 'email' , 'min:3'],
+            'name' => [ 'min:3' , 'max:100'],
+            'password' => [ 'min:3' , 'max:100'],
+            'email' => [ 'email' , 'min:3'],
             'foto_profil' => ['mimes:png,jpg,jpeg'  , 'max:2mb']
         ];
-        if ($this->path('login')) {
-            $rules['name'] = [];
-        }
-        if ($this->method('PUT')) {
-            $rules['name'] = ['min:3' , 'max:100'];
-            $rules['password'] = ['min:3' , 'max:100'];
-            $rules['email'] = ['email' , 'min:3'];
+        if ($this->method('POST')) {
+            array_push($rules['name'] , 'required');
+            array_push($rules['password'] , 'required');
+            array_push($rules['email'] , 'required');
         }
         return $rules;
     }
@@ -58,10 +56,12 @@ class userLogRequest extends FormRequest
 
     public function failedValidation(Validator $validator)
     {
-        return response()->json([
-            'status' => 'error',
-            'message' => 'validation error',
-            'error' => $validator->errors()
-        ] , 401);
+        throw new HttpResponseException(
+            response()->json([
+                'status' => 'error',
+                'message' => 'validation error',
+                'errors' => $validator->errors()
+            ], 422)
+        );
     }
 }

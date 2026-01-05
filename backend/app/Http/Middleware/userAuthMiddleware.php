@@ -23,12 +23,19 @@ class userAuthMiddleware
             $header = $request->bearerToken();
             $key = config('passport.firebase_key');
             $stdclass = new stdClass();
-            $access_token = JWT::decode($header , new Key($key , 'HS256') , $stdclass);
+            $access_token = JWT::decode($header, new Key($key, 'HS256'), $stdclass);
+            if ($access_token->token !== 'user') {
+                return response()->json([
+                    'status' => 'failed to login',
+                    'message' => 'silahkan login dulu sebagai user'
+                ], 401);
+            }
             $request->setUserResolver(fn() => $access_token);
             return $next($request);
         } catch (\Exception $e) {
             return response()->json([
-                'status' => 'failed to login'
+                'status' => 'failed to login',
+                'message' => 'silahkan login dulu sebagai user'
             ], 401);
         }
     }

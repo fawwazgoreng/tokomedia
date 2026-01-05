@@ -9,8 +9,7 @@ use App\Models\refresh_token;
 use App\Models\User;
 use App\services\emailOtp;
 use App\services\pathphoto;
-use App\services\resReturn;
-use Carbon\Carbon;
+use App\services\tokenReturn;
 use Firebase\JWT\JWT;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -22,11 +21,7 @@ use function Illuminate\Support\now;
 
 class userLogController extends Controller
 {
-    public function __construct(protected resReturn $res_return, protected pathphoto $photofn, protected emailOtp $emailFn) {}
-    public function test()
-    {
-        return response()->json("test");
-    }
+    public function __construct(protected tokenReturn $token_return, protected pathphoto $photofn, protected emailOtp $emailFn) {}
     protected function getSecretKey()
     {
         $key = config('passport.firebase_key');
@@ -64,14 +59,15 @@ class userLogController extends Controller
         }
         $key = $this->getSecretKey();
         $payload = [
+            'token' => 'user',
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
             'exp' => now()->addMinutes(60)
         ];
         $access_token = JWT::encode($payload, $key, 'HS256');
-        $refresh_token = $this->res_return->createRefreshToken($user);
-        return $this->res_return->returnWithToken($user, $access_token, $refresh_token, false);
+        $refresh_token = $this->token_return->createRefreshToken($user);
+        return $this->token_return->returnWithToken($user, $access_token, $refresh_token, false);
     }
 
     public function logout(Request $request)
@@ -127,6 +123,7 @@ class userLogController extends Controller
             ]
         );
         $payload = [
+            'token' => 'user',
             'id' => $user->id,
             'email' => $google->getEmail(),
             'name' => $user->name,
@@ -139,8 +136,8 @@ class userLogController extends Controller
         }
         $key = $this->getSecretKey();
         $access_token = JWT::encode($payload, $key, 'HS256');
-        $refresh_token = $this->res_return->createRefreshToken($user);
-        return $this->res_return->returnWithToken($user, $access_token, $refresh_token, true);
+        $refresh_token = $this->token_return->createRefreshToken($user);
+        return $this->token_return->returnWithToken($user, $access_token, $refresh_token, true);
     }
 
     public function refresh(Request $request)
@@ -214,7 +211,7 @@ class userLogController extends Controller
             ], 400);
         }
         $otp = hash('sha256' , $data['otp']);
-        $email = email_otp::where('otp' , $otp)->where('for_type', User::class)->first();
+        $email = email_otp::where('otp' , $otp)->where('for_type', User::class)->where('expires_at' , '>' , now())->first();
         if (!$email) {
             return response()->json([
                 'status' => 'error',

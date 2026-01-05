@@ -3,8 +3,6 @@
 namespace App\services;
 
 use App\Models\email_otp;
-use App\Models\User;
-use Illuminate\Support\Facades\Hash;
 
 use function Illuminate\Support\now;
 
@@ -19,7 +17,7 @@ class emailOtp {
             'email' => $email,
             'otp' => hash('sha256', $hash),
             'for_id' => $user->id,
-            'for_type' => User::class,
+            'for_type' => $user::class,
             'expires_at' => now()->addMinutes(5)
         ]);
         return $hash;

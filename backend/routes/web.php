@@ -1,12 +1,9 @@
 <?php
 
+use App\Http\Controllers\productController;
 use App\Http\Controllers\userLogController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
-Route::get('/test' , [userLogController::class , 'test']);
 
 Route::get('/auth/google/redirect', [userLogController::class, 'redirect']);
 Route::get('/auth/google/callback', [userLogController::class, 'callback']);

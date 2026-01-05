@@ -6,7 +6,7 @@ use App\Models\refresh_token;
 use App\Models\User;
 use Illuminate\Support\Str;
 
-class resReturn
+class tokenReturn
 {
     function createRefreshToken(User $user)
     {

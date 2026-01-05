@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('variants', function (Blueprint $table) {
             $table->id();
             $table->foreignId('product_id')->references('id')->on('products')->cascadeOnDelete();
-            $table->string('sku' , 10)->default('KPR');
+            $table->string('sku' , 50 )->default('KPR');
             $table->integer('stock')->default(0);
             $table->integer('price')->default(0);
             $table->string('option_1' , 30)->nullable();

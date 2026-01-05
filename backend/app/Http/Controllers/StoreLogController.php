@@ -7,10 +7,9 @@ use App\Mail\otpMail;
 use App\Models\email_otp;
 use App\Models\refresh_token;
 use App\Models\store;
-use App\Models\User;
 use App\services\emailOtp;
 use App\services\pathphoto;
-use App\services\resReturn;
+use App\services\tokenReturn;
 use Firebase\JWT\JWT;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -20,11 +19,7 @@ use Laravel\Socialite\Socialite;
 
 class StoreLogController extends Controller
 {
-    public function __construct(protected resReturn $res_return, protected pathphoto $photofn, protected emailOtp $emailFn) {}
-    public function test()
-    {
-        return response()->json("test");
-    }
+    public function __construct(protected tokenReturn $token_return, protected pathphoto $photofn, protected emailOtp $emailFn) {}
     protected function getSecretKey()
     {
         $key = config('passport.firebase_key');
@@ -34,9 +29,9 @@ class StoreLogController extends Controller
     public function register(userLogRequest $request)
     {
         $data = $request->validated();
-        $last_store = User::select(['password', 'id', 'email_verified_at'])->where('email', $data['email'])->first();
-        if ($last_store &&  $last_store->email_verified_at == null) {
-            $last_store->delete();
+        $last_user = store::select(['password', 'id', 'email_verified_at', 'email'])->where('email', $data['email'])->first();
+        if ($last_user &&  $last_user->email_verified_at == null) {
+            $last_user->delete();
         }
         $store = store::create([
             'name' => $data['name'],
@@ -53,29 +48,30 @@ class StoreLogController extends Controller
         if (!$store || !Hash::check($data['password'], $store->password) || $store->email_verified_at == null) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'nama store atau password salah'
-            ]);
+                'message' => 'username atau password salah'
+            ], 400);
         }
-        $last_refresh_token = refresh_token::where("tokenable_id" , $store->id)->where("tokenable_type" , store::class);
+        $last_refresh_token = refresh_token::where("tokenable_id", $store->id)->where("tokenable_type", store::class);
         if ($last_refresh_token) {
             $last_refresh_token->delete();
         }
         $key = $this->getSecretKey();
         $payload = [
+            'token' => 'store',
             'id' => $store->id,
             'name' => $store->name,
             'email' => $store->email,
             'exp' => now()->addMinutes(60)
         ];
         $access_token = JWT::encode($payload, $key, 'HS256');
-        $refresh_token = $this->res_return->createRefreshToken($store);
-        return $this->res_return->returnWithToken($store, $access_token, $refresh_token , false);
+        $refresh_token = $this->token_return->createRefreshToken($store);
+        return $this->token_return->returnWithToken($store, $access_token, $refresh_token, false);
     }
 
     public function logout(Request $request)
     {
         $store = $request->store();
-        $refresh_token = refresh_token::where("tokenable_id", $store->id)->where("tokenable_type", store::class)->first();
+        $refresh_token = refresh_token::select(['id'])->where("tokenable_id", $store->id)->where("tokenable_type", store::class)->first();
         if ($refresh_token) {
             $refresh_token->delete();
         }
@@ -88,11 +84,11 @@ class StoreLogController extends Controller
     public function update(userLogRequest $request)
     {
         $data = $request->only('name', 'foto_profil');
-        $store = $request->store();
+        $store = $request->user();
         $path = $store->foto_profil;
         if ($request->hasFile("foto_profil")) {
             $file = $request->file('foto_profil');
-            $path = $this->photofn->updatePathPhoto($path, $file, "stores");
+            $path = $this->photofn->updatePathPhoto($path, $file, "users");
         }
         $store->update([
             'name' => $data['name'] ?? $store->name,
@@ -125,6 +121,7 @@ class StoreLogController extends Controller
             ]
         );
         $payload = [
+            'token' => 'store',
             'id' => $store->id,
             'email' => $google->getEmail(),
             'name' => $store->name,
@@ -137,8 +134,8 @@ class StoreLogController extends Controller
         }
         $key = $this->getSecretKey();
         $access_token = JWT::encode($payload, $key, 'HS256');
-        $refresh_token = $this->res_return->createRefreshToken($store);
-        return $this->res_return->returnWithToken($store, $access_token, $refresh_token, true);
+        $refresh_token = $this->token_return->createRefreshToken($store);
+        return $this->token_return->returnWithToken($store, $access_token, $refresh_token, true);
     }
 
     public function refresh(Request $request)
@@ -158,6 +155,10 @@ class StoreLogController extends Controller
             ], 401)->withCookie(cookie()->forget('refresh_token'));
         }
         $store = $refresh_token->tokenable;
+        if ($store->email_verified_at == null) {
+            $store->delete();
+            return response()->json([], 401);
+        }
         $payload = [
             'id' => $store->id,
             'email' => $store->email,
@@ -182,21 +183,21 @@ class StoreLogController extends Controller
         $otp = $this->emailFn->createOtp($store->email, $store);
         Mail::to($store->email)->send(new otpMail($otp));
         return response()->json([
-            'message' => 'OTP berhasil dikirim ke email'
+            'status' => 'success',
+            'message' => 'OTP berhasil dikirim ke email',
+            'email' => $store->email
         ]);
     }
 
     public function verifyedOtp(Request $request)
     {
         $rule = [
-            'kode' => ['string', 'min:6', 'max:6'],
-            'email' => ['email']
+            'otp' => ['string', 'min:6', 'max:6'],
         ];
         $message = [
-            'kode.string' => 'kode harus berupa string',
-            'kode.min' => 'minimal kode :min',
-            'kode.max' => 'maximal kode :max',
-            'email.email' => 'maximal kode :email',
+            'otp.string' => 'otp harus berupa string',
+            'otp.min' => 'minimal otp :min',
+            'otp.max' => 'maximal otp :max',
         ];
         $validator = validator($request->all(), $rule, $message);
         $data = $validator->validated();
@@ -207,18 +208,25 @@ class StoreLogController extends Controller
                 'error' => $validator->errors()
             ], 400);
         }
-        $email = email_otp::select(['id', 'email', 'expires_at', 'otp'])->where('email', $data['email'])->where('for_type' , store::class);
-        if (!$email || !Hash::check($data['kode'], $email->otp)) {
+        $otp = hash('sha256' , $data['otp']);
+        $email = email_otp::where('otp' , $otp)->where('for_type', store::class)->where('expires_at' , '>' , now())->first();
+        if (!$email) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'kode otp salah',
             ], 401);
         }
+        $store = $email->for;
         $email->delete();
+        $store->update([
+            'email_verified_at' => now(),
+        ]);
+        $store->save();
         return response()->json([
             'status' => 'success',
             'message' => 'berhasil register'
         ]);
     }
 }
+
 
