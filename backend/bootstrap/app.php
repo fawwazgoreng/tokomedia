@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\storeAuthMiddleware;
 use App\Http\Middleware\userAuthMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -14,7 +15,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'user.middle' => userAuthMiddleware::class
+            'user.middle' => userAuthMiddleware::class,
+            'store.middle' => storeAuthMiddleware::class
         ]);
         $middleware->validateCsrfTokens(except:['/api/*']);
     })

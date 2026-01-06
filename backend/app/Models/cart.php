@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class cart extends Model
 {
     protected $fillable = [
-        'user_id' , 'products_id' , 'jumlah'
+        'user_id' , 'products_id' , 'jumlah' , 'variants_id'
     ];
 
 

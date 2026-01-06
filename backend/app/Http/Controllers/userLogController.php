@@ -30,44 +30,58 @@ class userLogController extends Controller
 
     public function register(userLogRequest $request)
     {
-        $data = $request->validated();
-        $last_user = User::select(['password', 'id', 'email_verified_at', 'email'])->where('email', $data['email'])->first();
-        if ($last_user &&  $last_user->email_verified_at == null) {
-            $last_user->delete();
+        try {
+            $data = $request->validated();
+            $last_user = User::select(['password', 'id', 'email_verified_at', 'email'])->where('email', $data['email'])->first();
+            if ($last_user &&  $last_user->email_verified_at == null) {
+                $last_user->delete();
+            }
+            $user = User::create([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'password' => Hash::make($data['password']),
+            ]);
+            return $this->send($user);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'server sedang error',
+            ], 500);
         }
-        $user = User::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'password' => Hash::make($data['password']),
-        ]);
-        return $this->send($user);
     }
 
     public function login(userLogRequest $request)
     {
-        $data = $request->validated();
-        $user = User::select(['id' , 'email' , 'password' , 'email_verified_at' , 'name'])->where('email', $data['email'])->first();
-        if (!$user || !Hash::check($data['password'], $user->password) || $user->email_verified_at == null) {
+        try {
+            $data = $request->validated();
+            $user = User::select(['id', 'email', 'password', 'email_verified_at', 'name'])->where('email', $data['email'])->first();
+            if (!$user || !Hash::check($data['password'], $user->password) || $user->email_verified_at == null) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'username atau password salah'
+                ], 400);
+            }
+            $last_refresh_token = refresh_token::where("tokenable_id", $user->id)->where("tokenable_type", User::class);
+            if ($last_refresh_token) {
+                $last_refresh_token->delete();
+            }
+            $key = $this->getSecretKey();
+            $payload = [
+                'token' => 'user',
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'exp' => now()->addMinutes(60)
+            ];
+            $access_token = JWT::encode($payload, $key, 'HS256');
+            $refresh_token = $this->token_return->createRefreshToken($user);
+            return $this->token_return->returnWithToken($user, $access_token, $refresh_token, false);
+        } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'username atau password salah'
-            ], 400);
+                'message' => 'server sedang error',
+            ], 500);
         }
-        $last_refresh_token = refresh_token::where("tokenable_id", $user->id)->where("tokenable_type", User::class);
-        if ($last_refresh_token) {
-            $last_refresh_token->delete();
-        }
-        $key = $this->getSecretKey();
-        $payload = [
-            'token' => 'user',
-            'id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'exp' => now()->addMinutes(60)
-        ];
-        $access_token = JWT::encode($payload, $key, 'HS256');
-        $refresh_token = $this->token_return->createRefreshToken($user);
-        return $this->token_return->returnWithToken($user, $access_token, $refresh_token, false);
     }
 
     public function logout(Request $request)
@@ -85,21 +99,28 @@ class userLogController extends Controller
 
     public function update(userLogRequest $request)
     {
-        $data = $request->only('name', 'foto_profil');
-        $user = $request->user();
-        $path = $user->foto_profil;
-        if ($request->hasFile("foto_profil")) {
-            $file = $request->file('foto_profil');
-            $path = $this->photofn->updatePathPhoto($path, $file, "users");
+        try {
+            $data = $request->only('name', 'foto_profil');
+            $user = $request->user();
+            $path = $user->foto_profil;
+            if ($request->hasFile("foto_profil")) {
+                $file = $request->file('foto_profil');
+                $path = $this->photofn->updatePathPhoto($path, $file, "users");
+            }
+            $user->update([
+                'name' => $data['name'] ?? $user->name,
+                'foto_profil' => $path,
+            ]);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'berhasil update profil'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'server sedang error',
+            ], 500);
         }
-        $user->update([
-            'name' => $data['name'] ?? $user->name,
-            'foto_profil' => $path,
-        ]);
-        return response()->json([
-            'status' => 'success',
-            'message' => 'berhasil update profil'
-        ]);
     }
 
     public function redirect()
@@ -109,70 +130,84 @@ class userLogController extends Controller
 
     public function callback()
     {
-        $google = Socialite::driver('google')->user();
-        $user = User::updateOrCreate(
-            [
+        try {
+            $google = Socialite::driver('google')->user();
+            $user = User::updateOrCreate(
+                [
+                    'email' => $google->getEmail(),
+                ],
+                [
+                    'name' => $google->getName(),
+                    'provider' => 'google',
+                    'provider_id' => $google->getId(),
+                    'foto_profil' => $google->getAvatar() ?? 'kosong',
+                    'password' => Hash::make(Str::random(12))
+                ]
+            );
+            $payload = [
+                'token' => 'user',
+                'id' => $user->id,
                 'email' => $google->getEmail(),
-            ],
-            [
-                'name' => $google->getName(),
-                'provider' => 'google',
-                'provider_id' => $google->getId(),
-                'foto_profil' => $google->getAvatar() ?? 'kosong',
-                'password' => Hash::make(Str::random(12))
-            ]
-        );
-        $payload = [
-            'token' => 'user',
-            'id' => $user->id,
-            'email' => $google->getEmail(),
-            'name' => $user->name,
-            'token' => Str::random(12),
-            'exp' => now()->addMinutes(60)
-        ];
-        $last_refresh_token = refresh_token::where('tokenable_id', $user->id)->where('tokenable_type', User::class);
-        if ($last_refresh_token) {
-            $last_refresh_token->delete();
+                'name' => $user->name,
+                'token' => Str::random(12),
+                'exp' => now()->addMinutes(60)
+            ];
+            $last_refresh_token = refresh_token::where('tokenable_id', $user->id)->where('tokenable_type', User::class);
+            if ($last_refresh_token) {
+                $last_refresh_token->delete();
+            }
+            $key = $this->getSecretKey();
+            $access_token = JWT::encode($payload, $key, 'HS256');
+            $refresh_token = $this->token_return->createRefreshToken($user);
+            return $this->token_return->returnWithToken($user, $access_token, $refresh_token, true);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'server sedang error',
+            ], 500);
         }
-        $key = $this->getSecretKey();
-        $access_token = JWT::encode($payload, $key, 'HS256');
-        $refresh_token = $this->token_return->createRefreshToken($user);
-        return $this->token_return->returnWithToken($user, $access_token, $refresh_token, true);
     }
 
     public function refresh(Request $request)
     {
-        $cookie = $request->cookie('refresh_token');
-        if (!$cookie) {
+        try {
+            $cookie = $request->cookie('refresh_token');
+            if (!$cookie) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'sesi login telah habis silahkan login ulang'
+                ], 401);
+            }
+            $refresh_token = refresh_token::where('tokenable_type', User::class)->where('token', hash('sha256', $cookie))->where('expires_at', '>', now())->first();
+            if (!$refresh_token) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'sesi login telah habis silahkan login ulang'
+                ], 401)->withCookie(cookie()->forget('refresh_token'));
+            }
+            $user = $refresh_token->tokenable;
+            if ($user->email_verified_at == null) {
+                $user->delete();
+                return response()->json([], 401);
+            }
+            $payload = [
+                'id' => $user->id,
+                'email' => $user->email,
+                'name' => $user->name,
+                'token' => Str::random(12),
+                'exp' => now()->addMinutes(60)
+            ];
+            $key = $this->getSecretKey();
+            $access_token = JWT::encode($payload, $key, 'HS256');
+            return response()->json([
+                'token' => $access_token
+            ], 200);
+        } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'sesi login telah habis silahkan login ulang'
-            ], 401);
+                'message' => 'server sedang error',
+            ], 500);
         }
-        $refresh_token = refresh_token::where('tokenable_type', User::class)->where('token', hash('sha256', $cookie))->where('expires_at', '>', now())->first();
-        if (!$refresh_token) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'sesi login telah habis silahkan login ulang'
-            ], 401)->withCookie(cookie()->forget('refresh_token'));
-        }
-        $user = $refresh_token->tokenable;
-        if ($user->email_verified_at == null) {
-            $user->delete();
-            return response()->json([], 401);
-        }
-        $payload = [
-            'id' => $user->id,
-            'email' => $user->email,
-            'name' => $user->name,
-            'token' => Str::random(12),
-            'exp' => now()->addMinutes(60)
-        ];
-        $key = $this->getSecretKey();
-        $access_token = JWT::encode($payload, $key, 'HS256');
-        return response()->json([
-            'token' => $access_token
-        ], 200);
     }
 
     public function profile(Request $request)
@@ -193,40 +228,47 @@ class userLogController extends Controller
 
     public function verifyedOtp(Request $request)
     {
-        $rule = [
-            'otp' => ['string', 'min:6', 'max:6'],
-        ];
-        $message = [
-            'otp.string' => 'otp harus berupa string',
-            'otp.min' => 'minimal otp :min',
-            'otp.max' => 'maximal otp :max',
-        ];
-        $validator = validator($request->all(), $rule, $message);
-        $data = $validator->validated();
-        if ($validator->fails()) {
+        try {
+            $rule = [
+                'otp' => ['string', 'min:6', 'max:6'],
+            ];
+            $message = [
+                'otp.string' => 'otp harus berupa string',
+                'otp.min' => 'minimal otp :min',
+                'otp.max' => 'maximal otp :max',
+            ];
+            $validator = validator($request->all(), $rule, $message);
+            $data = $validator->validated();
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'validation error',
+                    'error' => $validator->errors()
+                ], 400);
+            }
+            $otp = hash('sha256', $data['otp']);
+            $email = email_otp::where('otp', $otp)->where('for_type', User::class)->where('expires_at', '>', now())->first();
+            if (!$email) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'kode otp salah',
+                ], 401);
+            }
+            $user = $email->for;
+            $email->delete();
+            $user->update([
+                'email_verified_at' => now(),
+            ]);
+            $user->save();
+            return response()->json([
+                'status' => 'success',
+                'message' => 'berhasil register'
+            ]);
+        } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'validation error',
-                'error' => $validator->errors()
-            ], 400);
+                'message' => 'server sedang error',
+            ], 500);
         }
-        $otp = hash('sha256' , $data['otp']);
-        $email = email_otp::where('otp' , $otp)->where('for_type', User::class)->where('expires_at' , '>' , now())->first();
-        if (!$email) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'kode otp salah',
-            ], 401);
-        }
-        $user = $email->for;
-        $email->delete();
-        $user->update([
-            'email_verified_at' => now(),
-        ]);
-        $user->save();
-        return response()->json([
-            'status' => 'success',
-            'message' => 'berhasil register'
-        ]);
     }
 }

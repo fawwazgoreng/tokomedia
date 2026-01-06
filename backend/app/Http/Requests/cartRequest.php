@@ -6,14 +6,14 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class variantsRequest extends FormRequest
+class cartRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        return true;
+        return false;
     }
 
     /**
@@ -23,15 +23,26 @@ class variantsRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
-            'stock' => ['required'],
-            'price' => ['required'],
+        $rules = [
+            'products_id' => [ 'numeric'],
+            'jumlah' => ['numeric'],
+            'variants_id' => ['numeric']
         ];
+        if ($this->isMethod('POST')) {
+            array_push($rules['products_id'], 'required',);
+            array_push($rules['variants_id'], 'required',);
+        }
+        return $rules;
+    }
+
+    public function messages()
+    {
+        return parent::messages();
     }
 
     protected function failedValidation(Validator $validator)
     {
-        throw new HttpResponseException(
+        return new HttpResponseException(
             response()->json([
                 'status' => 'error',
                 'message' => 'validation error',

@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->references('id')->on('users')->cascadeOnDelete();
             $table->foreignId('products_id')->references('id')->on('products')->cascadeOnDelete();
+            $table->foreignId('variants_id')->references('id')->on('variants')->cascadeOnDelete();
             $table->integer('jumlah')->default(1);
             $table->timestamps();
         });

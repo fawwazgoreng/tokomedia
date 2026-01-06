@@ -27,7 +27,7 @@ class userLogRequest extends FormRequest
             'name' => [ 'min:3' , 'max:100'],
             'password' => [ 'min:3' , 'max:100'],
             'email' => [ 'email' , 'min:3'],
-            'foto_profil' => ['mimes:png,jpg,jpeg'  , 'max:2mb']
+            'foto_profil' => ['mimes:png,jpg,jpeg'  , 'max:2080']
         ];
         if ($this->method('POST')) {
             array_push($rules['name'] , 'required');
@@ -39,20 +39,9 @@ class userLogRequest extends FormRequest
 
     public function messages()
     {
-        return [
-            'name.required' => 'nama wajib diisi',
-            'name.min' => 'nama minimal berjumlah :min karakter',
-            'name.max' => 'maximal nama 100 :max',
-            'password.required' => 'password wajib diisi',
-            'password.min' => 'password minimal berjumlah :min karakter',
-            'password.max' => 'maximal password 100 :max',
-            'email.required' => 'email wajib diisi',
-            'email.min' => 'email minimal berjumlah :min karakter',
-            'email.email' => 'format email harus benar',
-            'foto_profil.mimes' => 'foto profil harus berupa png , jpg atau jpeg',
-            'foto_profil.max' => 'maximal foto profil :max'
-        ];
+        return parent::messages();
     }
+
 
     public function failedValidation(Validator $validator)
     {
