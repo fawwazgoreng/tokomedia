@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class cart extends Model
 {
@@ -17,7 +16,11 @@ class cart extends Model
         return $this->belongsTo(User::class , 'user_id' , 'id');
     }
 
-    public function product (): BelongsToMany {
-        return $this->belongsToMany(product::class , 'carts_products');
+    public function product (): BelongsTo {
+        return $this->belongsTo(product::class , 'products_id' , 'id');
+    }
+
+    public function variant (): BelongsTo {
+        return $this->belongsTo(variants::class , 'variants_id' , 'id');
     }
 }

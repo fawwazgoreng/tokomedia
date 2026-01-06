@@ -16,29 +16,16 @@ class cartController extends Controller
      */
     public function index(Request $request)
     {
-        try {
-        $user = $request->user();
-        $cart = cart::join('products as p', 'carts.products_id', '=', 'p.id')
-            ->join('stores as s', 'p.store_id', '=', 's.id')
-            ->join('categories_products as cp', 'p.id', '=', 'cp.product_id')
-            ->join('categories as c', 'cp.categories_id', '=', 'c.id')
-            ->join('variants as v', 'carts.variants_id', '=', 'v.id')
-            ->select([
-                'carts.id',
-                'carts.user_id',
-                'carts.products_id',
-                'carts.jumlah',
-                'p.name as product_name',
-                's.name as store_name',
-                'p.gambar',
-                'c.name as categories_name',
-                'c.id as categories_id',
-                'v.id as variant_id',
-                'v.option_1',
-                'v.option_2',
-                'v.price as variant_price',
-                'v.stock as variant_stock',
+        // try {
+        $user = User::get()->first();
+        // $user = $request->user();
+        $cart = cart::with([
+            'variant:id,price,stock,option_1,option_2',
+            'product:id,gambar,store_id',
+            'product.store:id,name',
+            'product.variants:id,price,stock,option_1,option_2,product_id',
             ])
+            ->select(['carts.id','carts.user_id','carts.products_id','carts.jumlah',])
             ->where('carts.user_id', $user->id);
         if ($request->filled('oldest')) {
             $cart->orderBy('carts.updated_at', 'desc');
@@ -57,12 +44,12 @@ class cartController extends Controller
             'message' => 'berhasil mendapatkan data cart',
             'data' => $res
         ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'server sedang error',
-            ] , 500);
-        }
+        // } catch (\Exception $e) {
+        //     return response()->json([
+        //         'status' => 'error',
+        //         'message' => 'server sedang error',
+        //     ] , 500);
+        // }
     }
 
     /**

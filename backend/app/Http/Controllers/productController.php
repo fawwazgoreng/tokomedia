@@ -21,41 +21,40 @@ class productController extends Controller
     public function index(Request $request)
     {
         try {
-            $product = product::with(['categories'  => function ($query) {
-                $query->select(['categories.id', 'categories.name']);
-            }, 'variant' => function ($query) {
-                $query->select(['variants.id', 'variants.product_id', 'variants.option_1']);
-            }])->select(['products.id', 'products.name', 'products.gambar', 'products.updated_at']);
-            if ($request->name) {
-                $name = $request->name;
-                $product->where('name', 'LIKE', $name . "%");
-            }
-            if ($request->filled('categories')) {
-                $product->whereExists(function ($q) use ($request) {
-                    $count = count($request->categories);
-                    $q->selectRaw(1)
-                        ->from('categories_products as cp')
-                        ->join('categories as c', 'c.id', '=', 'cp.categories_id')
-                        ->whereColumn('cp.product_id', 'products.id')
-                        ->whereIn('c.name', $request->categories)
-                        ->groupBy('cp.product_id')
-                        ->havingRaw('COUNT(DISTINCT c.id) = ?', [$count]);
-                });
-            }
-            if ($request->exists('oldest')) {
-                $product->orderBy('products.updated_at', 'desc');
-            } else {
-                $product->orderBy('products.updated_at', 'asc');
-            }
-            $res = $product->paginate(10);
-            return response()->json([
-                'data' => $res
-            ]);
+        $product = product::with([
+            'categories:id,name',
+            'variant:id,product_id,option_1',
+        ])->select(['id', 'name', 'gambar', 'updated_at']);
+        if ($request->name) {
+            $name = $request->name;
+            $product->where('name', 'LIKE', $name . "%");
+        }
+        if ($request->filled('categories')) {
+            $product->whereExists(function ($q) use ($request) {
+                $count = count($request->categories);
+                $q->selectRaw(1)
+                    ->from('categories_products as cp')
+                    ->join('categories as c', 'c.id', '=', 'cp.categories_id')
+                    ->whereColumn('cp.product_id', 'products.id')
+                    ->whereIn('c.name', $request->categories)
+                    ->groupBy('cp.product_id')
+                    ->havingRaw('COUNT(DISTINCT c.id) = ?', [$count]);
+            });
+        }
+        if ($request->exists('oldest')) {
+            $product->orderBy('products.updated_at', 'desc');
+        } else {
+            $product->orderBy('products.updated_at', 'asc');
+        }
+        $res = $product->paginate(10);
+        return response()->json([
+            'data' => $res
+        ]);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'server sedang error',
-            ] , 500);
+            ], 500);
         }
     }
 
@@ -100,7 +99,7 @@ class productController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'server sedang error',
-            ] , 500);
+            ], 500);
         }
     }
     /**
@@ -109,27 +108,21 @@ class productController extends Controller
     public function show(string $id)
     {
         try {
-            $product = product::with([
-                'variants' => function ($query) {
-                    $query->select(['variants.id', 'product_id', 'sku', 'stock', 'price', 'option_1', 'option_2', 'updated_at']);
-                },
-                'store' => function ($query) {
-                    $query->select(['stores.id', 'stores.name', 'foto_profil']);
-                },
-                'categories' => function ($query) {
-                    $query->select(['categories.id', 'categories.name']);
-                }
-            ])->select(['products.id', 'products.name', 'products.gambar', 'products.store_id'])->find($id);
-            return response()->json([
-                'status' => 'success',
-                'message' => 'berhasil mencari data product',
-                'data' => $product
-            ]);
+        $product = product::with([
+            'variants:id,product_id,sku,stock,price,option_1,option_2,updated_at',
+            'store:id,name,foto_profil',
+            'categories:id,name',
+        ])->select(['id', 'name', 'gambar', 'store_id'])->find($id);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'berhasil mencari data product',
+            'data' => $product
+        ]);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'server sedang error',
-            ] , 500);
+            ], 500);
         }
     }
 
@@ -142,22 +135,9 @@ class productController extends Controller
             $store = $request->user();
             $data = $request->validated();
             $product = product::with([
-                'variants' => function ($query) {
-                    $query->select([
-                        'variants.id',
-                        'product_id'
-                    ]);
-                },
-                'store' => function ($query) {
-                    $query->select([
-                        'stores.id',
-                    ]);
-                },
-                'categories' => function ($query) {
-                    $query->select([
-                        'categories.id',
-                    ]);
-                }
+                'variants:id,product_id',
+                'store:id',
+                'categories:id',
             ])->select(['products.id', 'products.name', 'products.gambar', 'products.store_id'])->where('store_id', $store->id)->find($id);
             $path = $product->gambar;
             if ($request->hasFile('gambar')) {
@@ -206,7 +186,7 @@ class productController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'server sedang error',
-            ] , 500);
+            ], 500);
         }
     }
 
