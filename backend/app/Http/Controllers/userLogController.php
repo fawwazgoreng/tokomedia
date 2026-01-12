@@ -45,7 +45,7 @@ class userLogController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'server sedang error',
+                'message' => 'server busy',
             ], 500);
         }
     }
@@ -58,7 +58,7 @@ class userLogController extends Controller
             if (!$user || !Hash::check($data['password'], $user->password) || $user->email_verified_at == null) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'username atau password salah'
+                    'message' => 'username or password wrong'
                 ], 400);
             }
             $last_refresh_token = refresh_token::where("tokenable_id", $user->id)->where("tokenable_type", User::class);
@@ -79,7 +79,7 @@ class userLogController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'server sedang error',
+                'message' => 'server busy',
             ], 500);
         }
     }
@@ -93,7 +93,7 @@ class userLogController extends Controller
         }
         return response()->json([
             'status' => 'success',
-            'message' => 'berhasil logout'
+            'message' => 'success logout'
         ], 200)->withCookie(cookie()->forget("refresh_token"));
     }
 
@@ -113,12 +113,12 @@ class userLogController extends Controller
             ]);
             return response()->json([
                 'status' => 'success',
-                'message' => 'berhasil update profil'
+                'message' => 'success update profil'
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'server sedang error',
+                'message' => 'server busy',
             ], 500);
         }
     }
@@ -163,7 +163,7 @@ class userLogController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'server sedang error',
+                'message' => 'server busy',
             ], 500);
         }
     }
@@ -175,14 +175,14 @@ class userLogController extends Controller
             if (!$cookie) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'sesi login telah habis silahkan login ulang'
+                    'message' => 'login session has expired'
                 ], 401);
             }
             $refresh_token = refresh_token::where('tokenable_type', User::class)->where('token', hash('sha256', $cookie))->where('expires_at', '>', now())->first();
             if (!$refresh_token) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'sesi login telah habis silahkan login ulang'
+                    'message' => 'login session has expired'
                 ], 401)->withCookie(cookie()->forget('refresh_token'));
             }
             $user = $refresh_token->tokenable;
@@ -205,7 +205,7 @@ class userLogController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'server sedang error',
+                'message' => 'server busy',
             ], 500);
         }
     }
@@ -221,7 +221,7 @@ class userLogController extends Controller
         Mail::to($user->email)->send(new otpMail($otp));
         return response()->json([
             'status' => 'success',
-            'message' => 'OTP berhasil dikirim ke email',
+            'message' => 'email otp has send',
             'email' => $user->email
         ]);
     }
@@ -233,7 +233,7 @@ class userLogController extends Controller
                 'otp' => ['string', 'min:6', 'max:6'],
             ];
             $message = [
-                'otp.string' => 'otp harus berupa string',
+                'otp.string' => 'otp code mush be string',
                 'otp.min' => 'minimal otp :min',
                 'otp.max' => 'maximal otp :max',
             ];
@@ -251,7 +251,7 @@ class userLogController extends Controller
             if (!$email) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'kode otp salah',
+                    'message' => 'otp code wrong',
                 ], 401);
             }
             $user = $email->for;
@@ -262,12 +262,12 @@ class userLogController extends Controller
             $user->save();
             return response()->json([
                 'status' => 'success',
-                'message' => 'berhasil register'
+                'message' => 'success register'
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'server sedang error',
+                'message' => 'server busy',
             ], 500);
         }
     }

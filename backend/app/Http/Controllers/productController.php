@@ -20,7 +20,6 @@ class productController extends Controller
 
     public function index(Request $request)
     {
-        try {
         $product = product::with([
             'categories:id,name',
             'variant:id,product_id,option_1',
@@ -47,15 +46,18 @@ class productController extends Controller
             $product->orderBy('products.updated_at', 'asc');
         }
         $res = $product->paginate(10);
+        if (!$res) {
+            return response()->json([
+                'status' => 'failed',
+                'message' => 'failed get product data',
+                'error' => 'product not found'
+            ], 404);
+        }
         return response()->json([
+            'status' => 'success',
+            'message' => 'success get product data',
             'data' => $res
         ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'server sedang error',
-            ], 500);
-        }
     }
 
     /**
@@ -92,13 +94,13 @@ class productController extends Controller
             };
             return response()->json([
                 'status' => 'success',
-                'message' => 'berhasil menmbah product',
+                'message' => 'success add product',
                 'data' => $product
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'server sedang error',
+                'message' => 'server busy',
             ], 500);
         }
     }
@@ -107,23 +109,23 @@ class productController extends Controller
      */
     public function show(string $id)
     {
-        try {
         $product = product::with([
             'variants:id,product_id,sku,stock,price,option_1,option_2,updated_at',
             'store:id,name,foto_profil',
             'categories:id,name',
         ])->select(['id', 'name', 'gambar', 'store_id'])->find($id);
+        if (!$product) {
+            return response()->json([
+                'status' => 'failed',
+                'message' => 'failed get product data',
+                'error' => 'product not found'
+            ], 404);
+        }
         return response()->json([
             'status' => 'success',
-            'message' => 'berhasil mencari data product',
+            'message' => 'success get product data',
             'data' => $product
         ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'server sedang error',
-            ], 500);
-        }
     }
 
     /**
@@ -179,13 +181,13 @@ class productController extends Controller
             }
             return response()->json([
                 'status' => 'success',
-                'message' => 'berhasil update product',
+                'message' => 'success update product',
                 'data' => $product
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'server sedang error',
+                'message' => 'server busy',
             ], 500);
         }
     }
@@ -196,18 +198,18 @@ class productController extends Controller
     public function destroy(Request $request, string $id)
     {
         $store = $request->user();
-        $product = product::find($id)->where('soter_id', $store->id);
+        $product = product::find($id)->where('store_id', $store->id);
         if ($product) {
             $product->delete();
             return response()->json([
                 'status' => 'success',
-                'message' => 'berhasil delete product',
-                'data' => $product
+                'message' => 'success delete product',
             ]);
         }
         return response()->json([
             'status' => 'failed',
-            'message' => 'data product tidak ditemukan',
+            'message' => 'failed delete product',
+            'error' => 'product not found'
         ], 404);
     }
 }
